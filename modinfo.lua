@@ -2,13 +2,13 @@
 name = "Throwable Players"
 
 --Description. You can put special characters here, but I'm not 100% sure how.
-description = "Wanna throw your players? You've got it!"
+description = "Wanna throw your players? You've got it! \n\nUse the bug net to pick up and throw players. "
 
 -- Your name, you can really put anything here, but I like to put my own username.
 author = "Skylarr"
 
 -- Version number, make sure to change this each time you upload via the Mod Tools, or else they get angry.
-version = "1.0.2"
+version = "1.0.6"
 
 -- The Forum URL after the ? and before the &.
 forumthread = ""
@@ -25,7 +25,10 @@ reign_of_giants_compatible = false
 shipwrecked_compatible = false
 
 -- This line forces every connected client to have the mod installed.
-all_clients_require_mod = true 
+all_clients_require_mod = true
+
+-- This line marks that this mod is only needed on the server. Since we aren't using custom assets.. , it isn't necessary for clients to have the mod.
+-- server_only_mod = true
 
 icon_atlas = "modicon.xml"
 icon = "modicon.tex"

@@ -31,7 +31,7 @@ AddPlayerPostInit(function(inst)
         --     worker.Physics:ClearCollidesWith(GLOBAL.COLLISION.CHARACTERS)
         -- end)
 
-        if inst == worker then
+        if inst == worker or worker:HasTag("heldbyplayer") then
             inst.components.workable:SetWorkLeft(1) 
             return
         end
