@@ -1,194 +1,106 @@
 -- Throwable Players
 -- By Skylarr
 
-PrefabFiles = {
-
-	"heldplayer",
-
-}
-
--- playernetrecipe = AddRecipe("playernet",
--- 	{
--- 		GLOBAL.Ingredient("twigs", 3),
--- 		GLOBAL.Ingredient("silk", 5),
--- 	},
--- 	GLOBAL.RECIPETABS.TOOLS, -- crafting tab
--- 	GLOBAL.TECH.SCIENCE_ONE, -- crafting level
--- 	nil, -- placer
--- 	nil, -- min_spacing
--- 	nil, -- nounlock
--- 	nil, -- numtogive
--- 	nil, -- builder_tag
--- 	"images/inventoryimages/hatbrella.xml", -- atlas
--- 	"hatbrella.tex" -- image
--- )
-
-AddPlayerPostInit(function(inst)
-    local function OnWorked(inst, worker)
-        -- inst.entity:SetParent(worker.playernetstorage.entity)
-        -- inst.parenttask = inst:DoPeriodicTask(0, function(inst)
-        --     inst.Physics:Teleport(worker.Transform:GetWorldPosition())
-        --     worker.Physics:ClearCollidesWith(GLOBAL.COLLISION.CHARACTERS)
-        -- end)
-
-        if inst == worker or worker:HasTag("heldbyplayer") then
-            inst.components.workable:SetWorkLeft(1) 
-            return
-        end
-
-        if worker:HasTag("player") then
-
-            worker.components.inventory:Equip(GLOBAL.SpawnPrefab("heldplayer"))
-
-            worker:PushEvent("holdingplayer", {heldplayer = inst})
-
-            -- inst.Physics:ClearCollidesWith(GLOBAL.COLLISION.CHARACTERS)
-            -- worker.holdtask = worker:DoPeriodicTask(0, inst.Transform:SetPosition(worker.Transform:GetWorldPosition()))
-        end
-    end
-
-    local function OnThrowPlayer(inst, data)
-        if inst.heldplayer and inst.heldplayer.components.complexprojectile and inst.heldplayer.components.workable and not inst.heldplayer:IsInLimbo() and inst.heldplayer:HasTag("heldbyplayer") then
-            local throwable = inst.heldplayer
-
-            if inst.holdtask ~= nil then
-                inst.holdtask:Cancel()
-                inst.holdtask = nil
-            end
-            throwable.components.complexprojectile:Launch(data.target, inst)
-            throwable:DoTaskInTime(1, function(throwable)
-                throwable:RemoveTag("heldbyplayer")
-                throwable.Physics:CollidesWith(GLOBAL.COLLISION.CHARACTERS)
-                throwable.Physics:CollidesWith(GLOBAL.COLLISION.WORLD)
-                -- throwable.Physics:ClearCollidesWith(GLOBAL.COLLISION.GROUND)
-                throwable.components.workable:SetWorkLeft(1) 
-
-                if inst.heldplayer.components.drownable ~= nil then
-                    inst.heldplayer.components.drownable.enabled=true
-                end
-            end)
-            
-        end
-    end
-
-    local function StopHoldingPlayer(inst)
-        
-        if inst.holdtask ~= nil then
-            inst.holdtask:Cancel()
-            inst.holdtask = nil
-        end
-
-        if inst.heldplayer:IsValid() then
-            inst.heldplayer.Physics:CollidesWith(GLOBAL.COLLISION.CHARACTERS)
-            inst.heldplayer.Physics:CollidesWith(GLOBAL.COLLISION.WORLD)
-            inst.heldplayer.components.workable:SetWorkLeft(1) 
-
-            if inst.heldplayer.components.drownable ~= nil then
-                inst.heldplayer.components.drownable.enabled=true
-            end
-
-            inst.heldplayer:RemoveTag("heldbyplayer")
-        end
-    end
-
-    local function OnPlayerHeld(inst, data)
-        inst.heldplayer = data.heldplayer
-
-        if inst.heldplayer then
-            inst:ListenForEvent("playerthrown", OnThrowPlayer)
-
-            inst.heldplayer:AddTag("heldbyplayer")
-
-            if inst.heldplayer.components.drownable ~= nil then
-                inst.heldplayer.components.drownable.enabled=false
-            end
-
-            inst.heldplayer.Physics:ClearCollidesWith(GLOBAL.COLLISION.CHARACTERS)
-            inst.heldplayer.Physics:ClearCollidesWith(GLOBAL.COLLISION.WORLD)
-            inst.heldplayer.Physics:CollidesWith(GLOBAL.COLLISION.GROUND)
-
-            if inst.holdtask ~= nil then
-                inst.holdtask:Cancel()
-                inst.holdtask = nil
-            end
-
-            inst.heldplayer:ListenForEvent("locmote", function(inst)
-                inst:DoTaskInTime(1, inst:PushEvent("stopholding"))
-            end)
-            
-            inst.holdtask = inst:DoPeriodicTask(0, function(inst)
-                if inst.heldplayer:IsValid() and not inst.heldplayer:IsInLimbo() and not inst.heldplayer:HasTag("playerghost") then
-                    local x, y, z = inst.Transform:GetWorldPosition()
-                    inst.heldplayer.Transform:SetPosition(x, y + 1, z)
-                else
-                    inst:PushEvent("stopholding")
-                end
-            end)
-        end
-    end
-
-    inst:AddComponent("workable")
-    inst.components.workable:SetWorkAction(GLOBAL.ACTIONS.NET)
-    inst.components.workable:SetWorkLeft(1) 
-    inst.components.workable:SetOnFinishCallback(OnWorked)
-
-    inst:AddComponent("complexprojectile")
-    inst.components.complexprojectile:SetHorizontalSpeed(18)
-    inst.components.complexprojectile:SetGravity(-45)
-    -- inst.components.complexprojectile:SetLaunchOffset(GLOBAL.Vector3(.25, 1, 0))
-
-    inst:ListenForEvent("holdingplayer", OnPlayerHeld)
-
-    inst:ListenForEvent("stopholding", StopHoldingPlayer)
-end)
-
-
+-- hook into complexprojectile to get targetpos
 
 AddComponentPostInit("complexprojectile", function(self)
-    self.targetpos = nil
+    local launch_old = self.Launch
 
-    function self:Launch(targetPos, attacker, owningweapon)
-        self.targetpos = targetPos
-        local pos = self.inst:GetPosition()
-        self.owningweapon = owningweapon or self
-        self.attacker = attacker
-    
-        self.inst:ForceFacePoint(targetPos:Get())
-    
-        local offset = self.launchoffset
-        if attacker ~= nil and offset ~= nil then
-            local facing_angle = self.inst.Transform:GetRotation() * GLOBAL.DEGREES
-            pos.x = pos.x + offset.x * math.cos(facing_angle)
-            pos.y = pos.y + offset.y
-            pos.z = pos.z - offset.x * math.sin(facing_angle)
-            -- print("facing", facing_angle)
-            -- print("offset", offset)
-            if self.inst.Physics ~= nil then
-                self.inst.Physics:Teleport(pos:Get())
-            else
-                self.inst.Transform:SetPosition(pos:Get())
-            end
+    self.Launch = function(self, targetPos, attacker, owningweapon)
+        self.currentTargetPos = targetPos
+
+        return launch_old(self, targetPos, attacker, owningweapon)
+    end
+end)
+
+AddPlayerPostInit(function(inst)
+    -- this is terrible, i know it's terrible, but it's also easy
+    inst:AddComponent("complexprojectile")
+    inst.components.complexprojectile:SetHorizontalSpeed(28)
+    inst.components.complexprojectile:SetGravity(-40)
+    inst.components.complexprojectile.usehigharc = false
+    inst.components.complexprojectile:SetOnHit(function(inst)
+        inst.components.pinnable:Unstick()
+    end)
+
+    inst:AddComponent("throwableplayer")
+
+    -- for normal characters
+    local function GetPointSpecialActions(inst, pos, useitem, right)
+        if right
+        and inst:HasTag("holdingplayer") then
+            return { GLOBAL.ACTIONS.THROW_PLAYER }
         end
-    
-        -- use targetoffset height, otherwise hit when you hit the ground
-        targetPos.y = self.targetoffset ~= nil and self.targetoffset.y or 0
-    
-        self:CalculateTrajectory(pos, targetPos, self.horizontalSpeed)
-    
-        -- if the attacker is standing on a moving platform, then inherit it's velocity too
-        local attacker_platform = attacker ~= nil and attacker:GetCurrentPlatform() or nil
-        if attacker_platform ~= nil then
-            local vx, vy, vz = attacker_platform.Physics:GetVelocity()
-            self.velocity.x = self.velocity.x + vx
-            self.velocity.z = self.velocity.z + vz
-        end
-    
-        if self.onlaunchfn ~= nil then
-            self.onlaunchfn(self.inst)
-        end
-    
-        self.inst:AddTag("activeprojectile")
-        self.inst:StartUpdatingComponent(self)
+        
+        return {}
     end
 
+    local function OnSetOwner(inst)
+        if inst.components.playeractionpicker ~= nil then
+            inst.components.playeractionpicker.pointspecialactionsfn = GetPointSpecialActions
+        end
+    end
+
+    inst:ListenForEvent("setowner", OnSetOwner)
 end)
+
+
+
+
+
+-- Pickup Action
+
+local PICKUP_PLAYER = AddAction("PICKUP_PLAYER", "Pick Up", function(act)
+    if act.doer.components.throwableplayer and math.sqrt(act.doer:GetDistanceSqToInst(act.target) or 0) < 2 then
+        act.doer.components.throwableplayer:Catch(act.target)
+        act.doer.SoundEmitter:PlaySound("dontstarve/wilson/dig")
+        return true
+    end
+end)
+
+-- shouldn't override much
+PICKUP_PLAYER.priority = 1.1
+PICKUP_PLAYER.distance = 1
+
+AddComponentAction("SCENE", "throwableplayer", function(inst, doer, actions, right)
+    if inst:HasTag("player") 
+    and not inst:HasTag("heldbyplayer") 
+    and doer ~= inst then
+        table.insert(actions, GLOBAL.ACTIONS.PICKUP_PLAYER)
+        return true
+    end
+end)
+
+AddStategraphActionHandler("wilson", GLOBAL.ActionHandler(GLOBAL.ACTIONS.PICKUP_PLAYER,
+function(inst)
+	return "dolongestaction"
+end))
+
+
+
+
+
+-- Throw Action
+
+local THROW_PLAYER = AddAction("THROW_PLAYER", "Throw", function(act)
+    if act.doer.components.throwableplayer then
+        act.doer.components.throwableplayer:Throw(act.pos.local_pt)
+        return true
+    end
+end)
+
+-- priority 10 to ensure it's always possible
+THROW_PLAYER.priority = 10
+THROW_PLAYER.distance = 30
+
+AddComponentAction("POINT", "throwableplayer", function(inst, doer, pos, actions, right, target)
+    if right and doer:HasTag("holdingplayer") then
+        table.insert(actions, GLOBAL.ACTIONS.THROW_PLAYER)
+        return true
+    end
+end)
+
+AddStategraphActionHandler("wilson", GLOBAL.ActionHandler(GLOBAL.ACTIONS.THROW_PLAYER,
+function(inst)
+	return "throw"
+end))
