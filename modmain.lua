@@ -74,7 +74,7 @@ THROW_PLAYER.priority = 10
 THROW_PLAYER.distance = 30
 
 AddComponentAction("POINT", "equippable", function(inst, doer, pos, actions, right, target)
-    if inst:HasTag("handheldplayer") and doer:HasTag("holdingplayer") then
+    if right and inst:HasTag("handheldplayer") and doer:HasTag("holdingplayer") then
         table.insert(actions, GLOBAL.ACTIONS.THROW_PLAYER)
         return true
     end

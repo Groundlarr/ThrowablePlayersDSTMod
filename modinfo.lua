@@ -8,7 +8,7 @@ description = "Wanna throw your friends?\n\nAllows you to walk up to anyone and 
 author = "Skylarr"
 
 -- Version number
-version = "1.0.0"
+version = "1.0.1"
 
 -- The Forum URL after the ? and before the &.
 forumthread = ""
