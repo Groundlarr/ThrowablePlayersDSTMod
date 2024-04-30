@@ -1,6 +1,10 @@
 -- Throwable Players
 -- By Skylarr
 
+PrefabFiles = {
+    "handheldplayer"
+}
+
 -- hook into complexprojectile to get targetpos
 
 AddComponentPostInit("complexprojectile", function(self)
@@ -24,28 +28,7 @@ AddPlayerPostInit(function(inst)
     end)
 
     inst:AddComponent("throwableplayer")
-
-    -- for normal characters
-    local function GetPointSpecialActions(inst, pos, useitem, right)
-        if right
-        and inst:HasTag("holdingplayer") then
-            return { GLOBAL.ACTIONS.THROW_PLAYER }
-        end
-        
-        return {}
-    end
-
-    local function OnSetOwner(inst)
-        if inst.components.playeractionpicker ~= nil then
-            inst.components.playeractionpicker.pointspecialactionsfn = GetPointSpecialActions
-        end
-    end
-
-    inst:ListenForEvent("setowner", OnSetOwner)
 end)
-
-
-
 
 
 -- Pickup Action
@@ -77,14 +60,11 @@ function(inst)
 end))
 
 
-
-
-
 -- Throw Action
 
 local THROW_PLAYER = AddAction("THROW_PLAYER", "Throw", function(act)
     if act.doer.components.throwableplayer then
-        act.doer.components.throwableplayer:Throw(act.pos.local_pt)
+        act.doer.components.throwableplayer:Throw(act.pos:GetPosition())
         return true
     end
 end)
@@ -93,8 +73,8 @@ end)
 THROW_PLAYER.priority = 10
 THROW_PLAYER.distance = 30
 
-AddComponentAction("POINT", "throwableplayer", function(inst, doer, pos, actions, right, target)
-    if right and doer:HasTag("holdingplayer") then
+AddComponentAction("POINT", "equippable", function(inst, doer, pos, actions, right, target)
+    if inst:HasTag("handheldplayer") and doer:HasTag("holdingplayer") then
         table.insert(actions, GLOBAL.ACTIONS.THROW_PLAYER)
         return true
     end

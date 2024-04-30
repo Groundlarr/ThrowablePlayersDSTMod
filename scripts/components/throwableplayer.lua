@@ -85,7 +85,19 @@ function ThrowablePlayer:GetReleased()
     self.inst.components.pinnable:SetDefaultWearOffTime(TUNING.PINNABLE_WEAR_OFF_TIME)
 
     self.inst.Physics:CollidesWith(COLLISION.CHARACTERS)
-    self.inst.Physics:CollidesWith(COLLISION.WORLD)
+    -- self.inst.Physics:CollidesWith(COLLISION.WORLD)
+
+
+    local function OnUnpin(inst)
+        self.inst.Physics:CollidesWith(COLLISION.WORLD)
+        self.inst:RemoveEventCallback("onunpin", OnUnpin)
+    end
+    
+    self.inst:DoTaskInTime(1, function()
+        self.inst.Physics:CollidesWith(COLLISION.WORLD)
+    end)
+
+    self.inst:ListenForEvent("onunpin", OnUnpin)
 end
 
 function ThrowablePlayer:GetThrown(targetpos)
@@ -117,6 +129,8 @@ function ThrowablePlayer:Catch(target)
 
     self.target = target
     self.inst:AddTag("holdingplayer")
+    self.hand = SpawnPrefab("handheldplayer")
+    self.inst.components.inventory:Equip(self.hand)
 
     self.target.components.throwableplayer:GetCaught(self.inst)
 end
@@ -126,6 +140,9 @@ function ThrowablePlayer:Release()
 
     self.target.components.throwableplayer:GetDropped()
 
+    if self.hand then
+        self.inst.components.inventory:RemoveItem(self.hand)
+    end
     self.target = nil
     self.inst:RemoveTag("holdingplayer")
 end
@@ -134,13 +151,20 @@ function ThrowablePlayer:Throw(targetpos)
     if self.target == nil or not self.target:IsValid() then return end
 
     self.target.components.throwableplayer:GetReleased()
+    print(targetpos)
     self.target.components.complexprojectile:Launch(targetpos)
 
+    if self.hand then
+        self.inst.components.inventory:RemoveItem(self.hand)
+    end
     self.target = nil
     self.inst:RemoveTag("holdingplayer")
 end
 
 function ThrowablePlayer:TargetEscaped()
+    if self.hand then
+        self.inst.components.inventory:RemoveItem(self.hand)
+    end
     self.target = nil
     self.inst:RemoveTag("holdingplayer")
 end

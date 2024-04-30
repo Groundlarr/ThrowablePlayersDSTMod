@@ -1,5 +1,5 @@
 -- Your mod's name! This one is simple enough, really.
-name = "[Beta] Throw Your Friends!"
+name = "[Int] Throwable Friends!"
 
 --Description. You can put special characters here
 description = "Wanna throw your friends?\n\nAllows you to walk up to anyone and pick them up!"
@@ -31,7 +31,8 @@ icon = "modicon.tex"
 -- The mod's tags displayed on the server list
 server_filter_tags = {
     "throwable players",
-    "throw your friends"
+    "throwable friends",
+    "fun",
 }
 
 configuration_options =
